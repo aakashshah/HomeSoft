@@ -1,0 +1,98 @@
+<?php
+  //0 = not approved
+  //1 = approved
+  //20 = rejected
+
+	//Calculate Approved Amount for Common
+	require("login.php");
+	mysql_select_db("home",$con);
+		$rcSet = mysql_query("SELECT SUM(amount) FROM common WHERE approved='1'",$con);
+		$row = mysql_fetch_array($rcSet);
+		$common_amount = -$row['SUM(amount)'];
+
+		//Add Adjustments
+		$query = "SELECT SUM(adjustments) FROM userpass";
+		$rcSet = mysql_query($query, $con);
+		$row = mysql_fetch_array($rcSet);
+		$common_adj = $common_amount + $row['SUM(adjustments)'];
+
+		$rcSet = mysql_query("SELECT SUM(amount) FROM common WHERE approved='0' OR approved='1'",$con);
+		$row = mysql_fetch_array($rcSet);
+		$common_total = -$row['SUM(amount)'];
+
+		$_SESSION['common'] = $common_amount;
+		if ($common_amount != NULL) {
+			if ($common_amount < 3000) {
+				$color = "red";
+			}
+			else {
+				$color ="darkgreen";
+			}
+			$common_amount = "Rs.&nbsp;".$common_amount;
+		}
+		else {
+			$color = "red";
+			$common_amount = "Rs.&nbsp;0";
+		}
+                $common_amount = $common_amount."&nbsp;(".$common_total.")&nbsp;(".$common_adj.")";
+		
+		//Calculate Amount for Credit/Debit
+		$dt = (date("Y")-1)."-".date("m")."-01";
+		$rcSet = mysql_query("SELECT SUM(amount) FROM common WHERE username='$_SESSION[uname]' AND amount > '0' AND dateadded > '$dt' AND approved='0'",$con);
+		$row = mysql_fetch_array($rcSet);
+		if($row['SUM(amount)'] != NULL) {
+			$amtCredit = $row['SUM(amount)'];
+		}
+		else {
+			$amtCredit = 0;
+		}
+		
+		$rcSet = mysql_query("SELECT SUM(amount) FROM common WHERE username='$_SESSION[uname]' AND amount < '0' AND dateadded > '$dt' AND approved='0'",$con);
+		$row = mysql_fetch_array($rcSet);
+		if($row['SUM(amount)'] != NULL) {
+			$amtDebit = abs($row['SUM(amount)']);
+		}
+		else {
+			$amtDebit = 0;
+		}
+		
+		$amt2Collect = $amtCredit - $amtDebit;
+		$rcSet = mysql_query("SELECT adjustments FROM userpass WHERE username='$_SESSION[uname]'", $con);
+		$row = mysql_fetch_array($rcSet);
+		$amt2Collect += $row['adjustments'];
+		if($row['adjustments'] < 0) {
+			$adjustmentAmt = "<td class='status'><font color='red'>Adjustment:&nbsp;Rs.&nbsp;".$row['adjustments']."</font></td>";
+		}
+		else {
+			$adjustmentAmt = "<td class='status'><font color='darkgreen'>Adjustment:&nbsp;Rs.&nbsp;".$row['adjustments']."</font></td>";
+		}
+				
+		//Decide if its credit or debit
+		if($amt2Collect < 0) {
+			$credeb = "<td class='status'><font color='red'>Pay:&nbsp;Rs.&nbsp;".abs($amt2Collect)."</font></td>";
+		}
+		else if($amt2Collect > 0) {
+			$credeb = "<td class='status'><font color='darkgreen'>Recieve:&nbsp;Rs.&nbsp;".abs($amt2Collect)."</font></td>";
+		}
+		else {
+			$credeb = "";
+		}
+		$msg = "<td class='status'><font color='darkgreen'>Cr:&nbsp;Rs.&nbsp;".$amtCredit."</font></td><td class='status'><font color='red'>Db:&nbsp;Rs.&nbsp;".$amtDebit."</font></td>".$credeb;
+		
+		//Display approval messages only if the user is admin
+		if($_SESSION['uname'] == "admin") {
+			$row = mysql_fetch_array(mysql_query("SELECT COUNT(*) FROM common WHERE approved='0'",$con));
+			$pending = "<td class='status'><a href='/pending.php'>".$row['COUNT(*)']."&nbsp;Approval(s)&nbsp;Pending</a></td>";
+		}
+		else {
+			$pending = "";
+		}
+		
+		//Display rejected message
+		$row = mysql_fetch_array(mysql_query("SELECT COUNT(*) FROM common WHERE username='$_SESSION[uname]' AND approved='20'",$con));
+		$rejected = "<td class='status'><a href='/rejected.php'>".$row['COUNT(*)']."&nbsp;Rejection(s)</a></td>";
+		
+	mysql_close($con);
+	//Display all the main bar
+	echo("<table border='0' cellpadding='5' width='100%'><tr><td class='status'><a href='/welcome.php'>Home</a></td><td class='status' width='100%'>Welcome <b>".strtoupper($_SESSION['uname'])."</b></td>".$adjustmentAmt."".$msg."".$pending."".$rejected."<td class='status'><font color='".$color."'>Pool:&nbsp;".$common_amount."</font></td><td class='status'><a href=\"/logout.php\" onclick = \"if (! confirm('Are you sure?')) return false;\">Logout</a></td></tr></table>");
+?>

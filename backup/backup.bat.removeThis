@@ -1,0 +1,15 @@
+@echo off
+FOR /F "TOKENS=1* DELIMS= " %%A IN ('DATE/T') DO SET CDATE=%%B
+FOR /F "TOKENS=1,2 eol=/ DELIMS=/ " %%A IN ('DATE/T') DO SET mm=%%B
+FOR /F "TOKENS=1,2 DELIMS=/ eol=/" %%A IN ('echo %CDATE%') DO SET dd=%%B
+FOR /F "TOKENS=2,3 DELIMS=/ " %%A IN ('echo %CDATE%') DO SET yyyy=%%B
+
+for /f "TOKENS=1" %%A IN ('time /t') do set tt=%%A
+for /f "TOKENS=1,2" %%A IN ('time /t') do set ampm=%%B
+for /f "TOKENS=1,2 DELIMS=:" %%A IN ('echo %tt%') do set h=%%A
+for /f "TOKENS=1,2 DELIMS=:" %%A IN ('echo %tt%') do set m=%%B
+
+SET fname=%yyyy%.%mm%.%dd%.%h%.%m%.%ampm%.sql
+
+mysqldump.exe -u homesoft --password=letmein home > %fname%
+copy %fname% backup.sql

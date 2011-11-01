@@ -1,0 +1,436 @@
+<?php
+	session_start();
+	if(!isset($_SESSION['uname']) || $_SESSION['uname']=="") { //Check for session
+		header("Location:index.php");
+	}
+	if($_SESSION['uname'] != "admin") {
+		header("Location:logout.php");
+	}
+	
+	if(isset($_POST['cancel'])) {
+		header("Location:welcome.php");
+	}
+	
+	/*
+		00 = deposit and not approved
+		01 = deposit and approved
+		02 = notice
+		10 = expense and not approved
+		11 = expense and approved
+		20 = rejected
+	*/
+?>
+<html>
+	<head>
+		<title>Welcome to HomeSoft v1.0</title>
+		<link rel="stylesheet" type="text/css" href="design.css" />
+		<link rel="shortcut icon" href="favicon.ico">
+		<script type="text/javascript">
+		<!--
+		
+		
+		function calcTotal() {
+				var nameArray = new Array();
+				var arrIndex = 0;
+				var debugText = "";
+				var flag = 0;
+				
+				var adjtable = document.getElementById("adjtable");
+				var adjcells = adjtable.getElementsByTagName("td");
+				
+				debugText = debugText + "<br>" + nameArray.length;
+				debugText = debugText + "<br>" + adjcells.length;
+				
+				for(var i = 0; i < adjcells.length; i++) {
+					var adjname = adjcells[i].getAttribute("id");
+					var adjamt = adjcells[i].getAttribute("name");
+					if(adjname != null && adjamt != null) {
+						var j=0;
+						for(j=0; j<arrIndex; j++) {
+							if(nameArray[j][0] == adjname)
+								break;
+						}
+						if(j<arrIndex) {
+							nameArray[j][1] = parseInt(nameArray[j][1]) + parseInt(adjamt);
+						} else {
+							nameArray[arrIndex] = new Array();
+							nameArray[arrIndex][0] = adjname;
+							nameArray[arrIndex][1] = parseInt(adjamt);
+							nameArray[arrIndex][2] = "";
+							arrIndex = arrIndex + 1;
+						}
+					}
+				}
+				
+				debugText = debugText + "<br>" + nameArray.length;
+				
+				var amttotal = document.getElementById("amttotal");
+				amttotal.innerHTML = "";
+				
+				var table = document.getElementById("datatable");
+				if(table != null) {
+					var lines = table.getElementsByTagName("tr");
+					
+					for (var i = 0; i < lines.length; i++) {
+						var name = lines[i].getAttribute("id");
+						var amt = lines[i].getAttribute("name");
+						var cells = lines[i].getElementsByTagName("td");
+						var inp = cells[0].getElementsByTagName("input");
+						
+						if(inp.length != 0 && inp[0].type == "checkbox" && inp[0].checked == true) {
+							var j;
+							for(j=0;j<arrIndex;j++) {
+								if(nameArray[j][0] == name)
+									break;
+							}
+							if(j<arrIndex) {
+								nameArray[j][1] = parseInt(nameArray[j][1]) + parseInt(amt);// - parseInt(amtEntered[0].value);
+							} else {
+								nameArray[arrIndex] = new Array();
+								nameArray[arrIndex][0] = name;
+								nameArray[arrIndex][1] = amt;
+								arrIndex = arrIndex + 1;
+							}
+							nameArray[j][2] = nameArray[j][2] + " " + inp[0].value;
+						}
+					}
+				}
+				
+				nameArray.sort();
+				var tab = "";
+				if(arrIndex>0) {
+					tab = "<br /><center><form name='mainapprove' action='pending.php' method='post'><table border='1' class='coll' cellpadding='5' width='330'><tr align='center' bgcolor='orange'><td><b>Name</b></td><td><b>Status</b></td><td align='right'><b>Amount</b></td><td align='center'><b>Pay/Recieve</b></td><td align='center'><b>Password</b></td></tr>";
+					for(var i=0;i<arrIndex;i++) {
+						var pay = "";
+						var col = "";
+						if(parseInt(nameArray[i][1])<0) {
+							pay = "Recieve";
+							col = "bgcolor='lightgreen'";
+						} else if(parseInt(nameArray[i][1])>0) {
+							pay = "Pay";
+							col = "bgcolor='lightblue'";
+						} else {
+							pay = "";
+							col = "bgcolor='#DDDDDD'";
+						}
+						tab = tab + "<tr " + col + "><td onClick='document.mainapprove.pass" + nameArray[i][0] + ".disabled=!document.mainapprove.pass" + nameArray[i][0] + ".disabled;document.mainapprove.amt" + nameArray[i][0] + ".disabled=!document.mainapprove.amt" + nameArray[i][0] + ".disabled' align='center'>" + nameArray[i][0] + "</td>";
+						tab = tab + "<td align='center'>" + pay + "</td><td align='right'>" + Math.abs(parseInt(nameArray[i][1])) + "</td>";
+						tab = tab + "<input type='hidden' name='sub[]' value='" + nameArray[i][0] + "'/>";
+						tab = tab + "<input type='hidden' name='selected" + nameArray[i][0] + "' value='" + nameArray[i][2] + "'/>";
+						tab = tab + "<input type='hidden' name='total" + nameArray[i][0] + "' value='" + nameArray[i][1] + "'/>";
+						tab = tab + "<td align='center'><input type='text' size='6' maxlength='6' style='text-align:right' name='amt" + nameArray[i][0] + "' value='" + parseInt(nameArray[i][1]) + "' DISABLED /></td>";
+						tab = tab + "<td align='center'><input type='password' name='pass" + nameArray[i][0] + "' DISABLED /></td>";
+						tab = tab + "</tr>";
+					}
+					tab = tab + "<td align='center' colspan='5'><input type='submit' name='mainAprv' value='Approve'/></td>";
+					tab = tab + "</table></form></center>";
+				}
+				amttotal.innerHTML = tab;// + "<br>" + debugText;
+				
+				flag = 0;
+				for(i=0; i < document.pendingdata.elements.length; i++) {
+					if(document.pendingdata.elements[i].id == "chkbx") {
+						if(document.pendingdata.elements[i].checked == true) {
+							flag = 1;
+							break;
+						}
+					}
+				}
+				if(flag==1) {
+					document.getElementById("rejsel").disabled = false;
+				}
+				else {
+					document.getElementById("rejsel").disabled = true;
+				}
+			}
+			
+			function fillPassword(obj) {
+				for(i=0; i < document.pendingdata.elements.length; i++) {
+					if (document.pendingdata.elements[i].id == obj.id) {
+						document.pendingdata.elements[i].value = obj.value;
+					}
+				}
+			}
+			
+			function checkAll() {
+				for(var i=0; i < document.pendingdata.elements.length; i++) {
+					if (document.pendingdata.elements[i].type == "checkbox") {
+						document.pendingdata.elements[i].checked = true;
+					}
+					if (document.pendingdata.elements[i].type == "password" || document.pendingdata.elements[i].type == "text") {
+						document.pendingdata.elements[i].disabled = false;
+					}
+				}
+				document.getElementById("rejsel").disabled = false;
+				calcTotal();
+			}
+			
+			function unCheckAll() {
+				for(var i=0; i < document.pendingdata.elements.length; i++) {
+					if (document.pendingdata.elements[i].type == "checkbox") {
+						document.pendingdata.elements[i].checked = false;
+					}
+					if (document.pendingdata.elements[i].type == "password" || document.pendingdata.elements[i].type == "text") {
+						document.pendingdata.elements[i].disabled = true;
+					}
+				}
+				document.getElementById("rejsel").disabled = true;
+				calcTotal();
+			}
+			
+			function chkAndFill(obj) {
+				if (obj.value.length == 0) {
+					obj.value = 0;
+				}
+				calcTotal();
+			}
+		//-->
+		</script>
+	</head>
+	<body bgcolor="#EEEEEE" onLoad="calcTotal();">
+		<table border="0" width="100%" height="100%">
+		<tr>
+			<td>
+			<?php
+			
+			//Connect to Database
+			require("login.php");
+			mysql_select_db("home",$con);
+			
+			$names_arr = NULL;
+			$names = "";
+			
+			if(isset($_POST['mainAprv'])) {
+				foreach($_POST['sub'] as $user) {
+					$var_total    = "total".$user;
+					$var_selected = "selected".$user;
+					$var_amount   = "amt".$user;
+					$var_password = "pass".$user;
+					if(isset($_POST[$var_selected]) && isset($_POST[$var_amount]) && isset($_POST[$var_password])) {
+						$total    = trim($_POST[$var_total]);
+						$selected = trim($_POST[$var_selected]);
+						$amount   = trim($_POST[$var_amount]);
+						$password = trim($_POST[$var_password]);
+						if($password != "" && (filter_var($amount, FILTER_VALIDATE_INT) || $amount=="0")) {
+							$expno = explode(" ",$selected);
+							//print_r($expno);//."<br>");
+							$query = "SELECT password FROM userpass WHERE username='$user'";
+							$rcSet = mysql_query($query,$con);
+							$row = mysql_fetch_array($rcSet);
+							//echo($user." - ");
+							if($row['password'] == md5($password)) {
+								$diff = $total - $amount;
+								foreach($expno as $e) {
+									$e = trim($e);
+									$query = "UPDATE common SET approved='1' WHERE expno='$e'";
+									mysql_query($query,$con);
+								}
+								$query = "UPDATE userpass SET adjustments='$diff' WHERE username='$user'";
+								mysql_query($query,$con);		
+							} else {
+								$names_arr[$user] = $user;
+							}
+							//echo("<br>");
+						} else {
+							$names_arr[$user] = $user;
+						}
+					}
+				}
+				
+				if($names_arr != NULL) {
+					foreach($names_arr as $n) {
+						$names .= "<u>".$n."</u>&nbsp;&nbsp;"; 
+					}
+				}
+			}
+			if(isset($_POST['rejSel'])) {
+				foreach ($_POST['app'] as $aprv) {
+					$query = "SELECT username FROM common WHERE expno='$aprv'";
+					$rcSet = mysql_query($query,$con);
+					$row = mysql_fetch_array($rcSet);
+					if($row['username'] == "common") {
+						$query = "DELETE FROM common WHERE expno='$aprv'";
+						mysql_query($query,$con);
+					}
+					else {
+						$query = "UPDATE common SET approved='20' WHERE expno='$aprv'";
+						mysql_query($query,$con);
+					}
+				}
+			}
+			
+			if(isset($_POST['srt'])) {
+				$orderby = $_POST['srt'];
+				$order = $_POST['ascdsc'];
+			}
+			else {			
+				$orderby = "expno";
+				$order = "DESC";
+			}
+			mysql_close($con);
+			//Display the Main Bar
+			require("mainBar.php");
+			?>
+			</td>
+		</tr>
+		<?php
+			require("displogo.php");
+		?>
+		<tr>
+			<td height='100%' valign='top'>
+			<?php
+			if($names != "") {
+				echo ("<br><center><font color='red'>Invalid Password Entered for: <b>".$names."</b></font></center>");
+			}
+			require("login.php");
+			mysql_select_db("home", $con);
+			$rcSet = mysql_query("SELECT * FROM common WHERE approved='0' ORDER BY ".$orderby." ".$order, $con);
+			?>
+				<div id="amttotal">
+				</div>
+				<br>				
+			<?php
+			//For Adjustments
+			$rcSet2 = mysql_query("SELECT username, adjustments FROM userpass WHERE enabled='1' ORDER BY username", $con);
+			$noOfRows = mysql_num_rows($rcSet2);
+			if ($noOfRows < 4) {
+				$colSpn = (($noOfRows % 4)*2);
+			}
+			else {
+				$colSpn = 8;
+			}
+			$tdwidth = (100/$colSpn)."%";
+			if (($common_adj-$_SESSION['common']) < 0) {
+				$adj_amt_total = "Recieve&nbsp;Rs.&nbsp;".abs($common_adj-$_SESSION['common']);
+			}
+			else {
+				$adj_amt_total = "Pay&nbsp;Rs.&nbsp;".abs($common_adj-$_SESSION['common']);
+			}
+			echo("
+				<table id='adjtable' class='coll' border='1' align='center' width='80%' cellpadding='5'>
+				<tr>
+					<td align='left' colspan='".$colSpn."' bgcolor='orange'><b>Adjustment Amount (".$adj_amt_total." in Total)</b></td>
+				</tr>");
+				
+			$cntr = 0;
+			while($row2 = mysql_fetch_array($rcSet2)) {
+				if($cntr == 0) {
+					echo("<tr>");
+				}
+				if ($row2['adjustments'] > 0) {
+					$fntclr = "lightblue";
+					$payrec = "Pay&nbsp;Rs.&nbsp;";
+				}
+				else if($row2['adjustments'] < 0) {
+					$fntclr = "lightgreen";
+					$payrec = "Recieve&nbsp;Rs.&nbsp;";
+				}
+				else {
+					$fntclr = "#DDDDDD";
+					$payrec = "";
+				}
+				echo("<td width='".$tdwidth."' bgcolor='".$fntclr."'><b>".$row2['username']."</b></td>");
+				echo("<td width='".$tdwidth."' id='".$row2['username']."' name='".$row2['adjustments']."' align='right' bgcolor='".$fntclr."'>".$payrec.abs($row2['adjustments'])."</td>");
+				$cntr++;
+				if($cntr == 4) {
+					echo("</tr>");
+					$cntr = 0;
+				}
+			}
+			echo("
+				</table>
+			");
+			//End of For Adjustments
+			if(mysql_num_rows($rcSet) > 0) {			
+			echo("<br><br><table id='datatable' class='coll' border='1' align='center' width='80%' cellpadding='5'>");
+			
+			echo("<tr><td colspan='7'><form action='pending.php' method='post'>
+				<b>Sort Data By:</b>&nbsp;&nbsp;&nbsp;
+				<select name='srt'>
+					<option value='username'>Name</option>
+					<option value='amount'>Amount</option>
+					<option value='dateadded'>Date</option>
+					<option value='reason'>Reason</option>
+					<option value='expno'>Expense</option>
+				</select>&nbsp;&nbsp;&nbsp;
+				<select name='ascdsc'>
+					<option value='ASC'>Ascending Order</option>
+					<option value='DESC'>Descending Order</option>
+				</select>&nbsp;&nbsp;&nbsp;
+				<input type='submit' name='sort' value='Go' />
+			</form></td></tr>");
+						
+			echo("<form name='pendingdata' action='pending.php' method='post'><tr>");
+				echo("<td align='center'><b>Select</b><br><a href='javascript:void(0);' onClick='checkAll();'>All</a>&nbsp;/&nbsp;<a href='javascript:void(0);' onClick='unCheckAll();'>None</a></td>");
+				echo("<td align='center'><b>Username</b></td>");
+				echo("<td align='center'><b>Credit (Rs.)</b></td>");
+				echo("<td align='center'><b>Debit (Rs.)</b></td>");
+				echo("<td align='center'><b>Date (YYYY-MM-DD)</b></td>");
+				echo("<td width='100%'><b>Reason</b></td>");
+				echo("<td align='center'><b>Category</b></td>");
+				//echo("<td align='center'><b>Transaction Amount</b></td>");
+				//echo("<td align='center'><b>Password for Approval</b></td>");
+			echo("</tr>");
+			$cnt = 0;
+			$credit = 0;
+			$debit = 0;
+			while ($row = mysql_fetch_array($rcSet)) {
+				if($cnt%2 == 0) {
+					$col = " bgcolor='#DDDDDD'";
+				}
+				else {
+					$col = "";
+				}
+				echo("<tr".$col." id='$row[username]' name='$row[amount]'>");
+					echo("<td align='center'><input type='checkbox' id='chkbx' name='app[]' value='$row[expno]' onClick='calcTotal();'/></td>");
+					echo("<td align='center'>".$row['username']."</td>");
+					if($row['amount'] > 0) {
+						echo("<td align='right'>".abs($row['amount'])."</td>");
+						echo("<td align='center'>*</td>");
+						$credit += $row['amount'];
+					}
+					else {
+						echo("<td align='center'>*</td>");
+						echo("<td align='right'>".abs($row['amount'])."</td>");
+						$debit += $row['amount'];
+					}
+					echo("<td align='center'>".$row['dateadded']."</td>");
+					echo("<td width='100%'>".$row['reason']."</td>");
+					echo("<td align='center'>".$row['category']."</td>");
+					//echo("<td align='center'><input type='text' name='appamt".$row['expno']."' id='".$row['username']."' value='".$row['amount']."' size='5' maxlength='5' style='text-align:right' onKeyUp='calcTotal();' onBlur='chkAndFill(this);' DISABLED /></td>");
+					//echo("<td><input type='password' name='pass".$row['expno']."' id='".$row['username']."' onKeyUp='fillPassword(this);' DISABLED /></td>");
+				echo("</tr>");
+				$cnt++;
+			}
+			
+			echo("<tr bgcolor='orange'>
+						<td align='center'><br></td>
+						<td align='center'><b>Total</b></td>
+						<td align='right'><b>".abs($credit)."</b></td>
+						<td align='right'><b>".abs($debit)."</b></td>
+						<td align='center'><b>*</b></td>
+						<td align='center'><b>*</b></td>
+						<td align='center'><b>*</b></td>
+					</tr>");
+					
+			echo("<tr><td colspan='7' align='center'><input type='submit' id='rejsel' name='rejSel' value='Reject Selected' DISABLED />&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<input type='submit' name='cancel' value='Done' /></td></tr></form>");
+			echo("</form></table>");
+			}
+			else {
+				echo("<center><br><br><br><br><b>No Approvals Pending</b><br><br><a href='welcome.php'>OK</a></center>");
+			}
+			mysql_close($con);
+			echo("<br><br></td></tr>");
+			?>
+			</td>
+		</tr>
+		<tr>
+			<td valign="bottom">
+			<?php
+				echo ("<table width='100%' cellpadding='5'><tr><td class='status'><font color='darkgreen'>Ready</font></td></tr></table>");
+			?>
+			</td>
+		</tr>
+		</table>
+	</body>
+</html>
